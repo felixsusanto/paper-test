@@ -1,0 +1,106 @@
+:root {
+  --canvas-width: 600px;
+  --canvas-height: 400px;
+  --frame-padding: 100px;
+  --frame: 100px;
+}
+
+.title {
+  font-family: 'Playfair Display', serif;
+  font-size: 6rem;
+  margin-bottom: 0.3em;
+  margin-top: 0.3em;
+}
+.sub {
+  font-family: 'Raleway', sans-serif;
+  letter-spacing: 0.5em;
+  margin-bottom: 2em;
+  font-weight: 500;
+}
+/* Scale canvas with resize attribute to full size */
+canvas[resize] {
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  background-color: #fff;
+}
+.canvas-wrapper {
+  box-shadow: inset 0px .3em .1em rgba(0,0,0,.2); 
+}
+
+body { 
+  background: #f6f5ee;
+  text-align: center;
+}
+figure {
+  display: inline-block;
+  line-height: 0;
+  position: relative;
+  &:before {
+    content: "";
+    position: absolute;
+    display: block;
+    width: calc(100% + var(--frame-padding));
+    height: calc(100% + var(--frame-padding));
+    top: calc(var(--frame-padding) / -2);
+    left: calc(var(--frame-padding) / -2);
+    background-color: #f8f8f8;
+    z-index: -1;
+    box-shadow:
+      inset 0px 10px .5em rgba(0,0,0,.25),
+      inset .1em 0px .1em rgba(0,0,0,.1),
+      inset -0.1em 0px .1em rgba(0,0,0,.05),
+      0 .3em .2em #fff;
+    background-image: -moz-radial-gradient(50% 50%, circle farthest-corner, #ffffff, #f8f8f8 100%);
+    background-image: -webkit-radial-gradient(50% 50%, circle farthest-corner, #ffffff, #f8f8f8 100%);
+    background-image: -o-radial-gradient(50% 50%, circle farthest-corner, #ffffff, #f8f8f8 100%);
+    background-image: -ms-radial-gradient(50% 50%, circle farthest-corner, #ffffff, #f8f8f8 100%);
+    background-image: radial-gradient(50% 50%, circle farthest-corner, #ffffff, #f8f8f8 100%);
+  }
+  &:after {
+    content: "";
+    position: absolute;
+    display: block;
+    
+    width: calc(100% + var(--frame) + var(--frame-padding));
+    height: calc(100% + var(--frame) + var(--frame-padding));
+    top: calc((var(--frame) + var(--frame-padding)) / -2);
+    left: calc((var(--frame) + var(--frame-padding)) / -2);
+    background: #e9e9e9;
+    z-index: -2;
+    box-shadow:
+      0px 1em 2em -1em rgba(0,0,0,.4),
+      0px 2em 2em -1em rgba(0,0,0,.3),
+      0px 3em 2em -1em rgba(0,0,0,.2),
+      0px 4em 1.5em -1em rgba(0,0,0,.15),
+      0px 2em 4em .5em rgba(0,0,0,.1),
+      inset 0 .2em .1em #fff;
+  }
+}
+
+.wrapper {
+  position: relative;
+  margin: 0 auto;
+  width: calc(var(--canvas-width) + var(--frame-padding) + var(--frame));
+  height: calc(var(--canvas-height) + var(--frame-padding) + var(--frame));
+  > figure {
+    top: calc((var(--frame-padding) + var(--frame)) / 2);
+    // left: calc((var(--frame-padding) + var(--frame)) / 2);
+  }
+}
+
+.test {
+  position: relative;
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-shadow: inset 0px .3em .2em rgba(0,0,0,.2);
+  }
+}
+#canvasdev {
+  width: 800px;
+  height: 800px;
+}

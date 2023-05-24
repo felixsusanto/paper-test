@@ -3,27 +3,59 @@ import seedrandom from "seedrandom";
 import { bottomVerticalLineRenderer, leftHorizontalLineRenderer, rightHorizontalLineRenderer, topVerticalLineRenderer } from "./utils";
 import _ from 'lodash';
 import "reset-css";
-import "./style.css";
+import "./style.scss";
 
 (() => {
   const global = paper;
   (window as any).global = global;
   const STROKE_WIDTH = 6;
   
-  global.setup("canvas");
+  global.setup("canvasdev");
   const viewSize = global.project.view.viewSize;
-  const palette = {
+  const palette: Record<string, string> = {
     blue: "#4754bd",
     red: "#e44525",
     yellow: "#f1d93b",
     black: "#000",
   }; 
-  const rng = seedrandom('Abcde' , { global: true }); 
+  const rng = seedrandom('Abcde');// , { global: true }); 
   const {black, ...colorPalette} = palette;
   const paletteArr = Object.values(palette);
   
   type RoundingFn = (x: number) => number;
-  
+
+  const oddsWeightFactory = (oddsConfig: Record<string, number>) => {
+    const keys: string[] = [];
+    const brackets: number[] = [];
+    let total = 0;
+    Object.entries(oddsConfig).forEach(([key, value]) => {
+      keys.push(key);
+      total += value;
+      brackets.push(total);
+    });
+    return (x: number) => {
+      const num = x * total;
+      let resIndex = -1;
+      for (let index = 0; index < brackets.length; index++) {
+        if (num < brackets[index]) {
+          resIndex = index;
+          break;
+        }
+      }
+      return keys[resIndex];
+    }
+  };
+
+  const colorWeights = oddsWeightFactory({
+    transparent: 60,
+    blue: 16,
+    red: 13,
+    yellow: 13,
+    black: 2,
+  });
+
+  const t = Array(100).fill('').map(() => colorWeights(Math.random()));
+  console.log(_.countBy(t, _.identity))
   const grid = (percent: number, scope: paper.PaperScope, debug = true): RoundingFn => {
     const { width, height } = scope.view.viewSize;
     const gridSize = Math.floor(percent * width);
@@ -66,8 +98,8 @@ import "./style.css";
   
   const roundingFn = grid(0.03, global, false);
   
-  const rectangleSeed = (roundingFn:(x: number) => number = (x) => x) => {
-    const range: [number, number] = [0.05, 0.4];
+  const rectangleSeedFactory = (range: [number, number])  => (roundingFn:(x: number) => number = (x) => x) => {
+    // const range: [number, number] = [0.05, 0.4];
     const minMaxWidth: [min: number, max: number] = range;
     const minMaxHeight: [min: number, max: number] = range;
     const { width, height } = viewSize;
@@ -87,6 +119,7 @@ import "./style.css";
     rect.fillColor = new global.Color(palette.blue)
     return rect;
   };
+  const rectangleSeed = rectangleSeedFactory([0.2, 0.4]);
   
   type ProximityCheck = (r1: paper.Path.Rectangle, r2: paper.Path.Rectangle, p: number) => boolean;
   
@@ -99,8 +132,11 @@ import "./style.css";
   };
   
   const rectangleFromLineIntersections = (lines: paper.Path.Line[], debug = false) => {
-    const gridPointsRaw = {x: new Set<number>(), y: new Set<number>()};
-    const points: paper.Point[] = [];
+    const gridPointsRaw = {
+      x: new Set<number>(), 
+      y: new Set<number>(),
+      coordinates: new Map<string, [number, number]>(),
+    };
     lines.map(l => {
         l.strokeWidth = STROKE_WIDTH;
         l.strokeColor = new paper.Color('#000');
@@ -112,56 +148,81 @@ import "./style.css";
           if (l === innerL) return;
           const ints = l.getIntersections(innerL);
           ints.forEach((cl) => {
-            if (debug) {
-              const c = new paper.Path.Circle(cl.point, 3);
-              c.fillColor = new paper.Color('#b4da55');
-            }
             cl.point.x = Math.round(cl.point.x);
             cl.point.y = Math.round(cl.point.y);
-            points.push(cl.point);
             const { x, y } = cl.point;
             gridPointsRaw.x.add(x);
             gridPointsRaw.y.add(y);
+            const key = `${x},${y}`;
+            if(!gridPointsRaw.coordinates.has(key)) {
+              gridPointsRaw.coordinates.set(key, [x, y]);
+              if (debug) {
+                const c = new paper.Path.Circle(cl.point, 3);
+                c.fillColor = new paper.Color('#b4da55');
+              }
+            }
           });
         })
       })
     ;
-    const gridPoints = { x: [...gridPointsRaw.x.values()].sort((a,b) => a - b), y: [...gridPointsRaw.y.values()].sort((a,b) => a - b)};
-    
-    points.forEach(point => {
-      const {x, y} = point;
+    const gridPoints = { 
+      x: [...gridPointsRaw.x.values()].sort((a,b) => a - b), 
+      y: [...gridPointsRaw.y.values()].sort((a,b) => a - b),
+      coordinates: _.orderBy([...gridPointsRaw.coordinates.values()], ['1', '0'])
+    };
+    interface Coordinate {
+      index: [number, number];
+      position: [number, number];
+    };
+    const coordinates = gridPoints.coordinates.map(point => {
+      const [x, y] = point;
       const xIndex = gridPoints.x.findIndex(v => v === x);
       const yIndex = gridPoints.y.findIndex(v => v === y);
       if (debug) {
-        var text = new paper.PointText(point.add(15));
+        var text = new paper.PointText(new paper.Point(x+5, y+15));
         text.content = `[${xIndex},${yIndex}]`;
         text.fillColor = new paper.Color('#00f');
       }
-    })
-    console.log(gridPoints);
-    const diags: [[x: number, y: number], [x2: number, y2: number]][] = [];
-    gridPoints.x.forEach((x, xi, arrX) => {
-      const isXLastIndex = (arrX.length - 1) === xi;
-      if (isXLastIndex) return;
-      gridPoints.y.forEach((y, yi, arrY) => {
-        const isYLastIndex = (arrY.length - 1) === yi;
-        if (isYLastIndex) return;
-        diags.push([[x, y], [arrX[xi+1], arrY[yi+1]]]);
-      });
+      const coordinate: Coordinate = {
+        index: [xIndex, yIndex],
+        position: [x, y],
+      };
+      return coordinate;
     });
-    diags.forEach((diag) => {
-      const [point1, point2] = diag;
-      const r = new paper.Path.Rectangle(new paper.Point(...point1), new paper.Point(...point2));
-      const colorIndex = Math.floor(Math.random() * paletteArr.length);
-      r.fillColor = new paper.Color(paletteArr[colorIndex]);
-      if (debug) {
-        const dg = new paper.Path.Line(new paper.Point(...point1), new paper.Point(...point2));
-        dg.strokeColor = r.fillColor;
-        r.opacity = 0.2;
+    const indexes = {
+      horizontal: _.groupBy(coordinates, (o) => o.index[1]),
+      vertical: _.groupBy(coordinates, (o) => o.index[0]),
+    };
+    coordinates.forEach((coor, index, arr) => {
+      const {index: [idx, idy]} = coor;
+      const curr: [number, number] = [idx, idy];
+      if (gridPoints.x.length === (idx + 1) || gridPoints.y.length === (idy + 1)) return;
+      const nextColNodeGroup = indexes.horizontal[idy];
+      const nextColNodeIndex = _.findIndex(nextColNodeGroup, (o) => _.isEqual(o.index, curr)) + 1;
+      const nextColNode: [number, number] | undefined  = nextColNodeGroup[nextColNodeIndex]?.index;
+      const nextRowNodeGroup = indexes.vertical[idx];
+      const nextRowNodeIndex = _.findIndex(nextRowNodeGroup, (o) => _.isEqual(o.index, curr)) + 1;
+      const nextRowNode: [number, number] | undefined = nextRowNodeGroup[nextRowNodeIndex]?.index;
+      if (!nextColNode || !nextRowNode) return;
+      const nodeCheck = _.zip(nextColNode, nextRowNode).map((arr) => Math.max(...arr as [number, number])) as [number, number];
+      const nodeCheckIndex = _.findIndex(coordinates, (o) => _.isEqual(o.index, nodeCheck));
+      if (nodeCheckIndex !== -1) {
+        // draw Rectangle!
+        const currCoor = coor.position;
+        const nodeCoor = coordinates[nodeCheckIndex].position;
+        const r = new paper.Path.Rectangle(new paper.Point(...currCoor), new paper.Point(...nodeCoor));
+        const colorName = colorWeights(Math.random());
+        // const colorIndex = Math.floor(Math.random() * paletteArr.length);
+        r.fillColor = colorName === 'transparent' ? null : new paper.Color(palette[colorName]);
+        if (debug) {
+          const dg = new paper.Path.Line(new paper.Point(...currCoor), new paper.Point(...nodeCoor));
+          dg.strokeColor = r.fillColor;
+          r.opacity = 0.2;
+        }
+        // r.selected = true;
+        r.sendToBack();
       }
-      // r.selected = true;
-      r.sendToBack();
-    });
+    })
   };
 
   const render = (totalSeed: number, proximityCheck: ProximityCheck, rounding: RoundingFn) => {
@@ -178,7 +239,8 @@ import "./style.css";
           uncommitedRect.remove();
           uncommitedRect = rectangleSeed(rounding);
         }
-        uncommitedRect.fillColor = new global.Color(paletteArr[i % paletteArr.length]!);
+        const colorName = colorWeights(Math.random());
+        uncommitedRect.fillColor = colorName === 'transparent' ? null : new global.Color(palette[colorName]);
         rectCollection.push(uncommitedRect);
       }
     }
@@ -196,7 +258,7 @@ import "./style.css";
       ].forEach(l => lines.push(l))
     });
     console.log(lines);
-    rectangleFromLineIntersections(lines, true);
+    rectangleFromLineIntersections(lines);
   };
   
   render(4, isTooNear, roundingFn);
