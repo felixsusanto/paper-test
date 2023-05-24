@@ -99,7 +99,8 @@ import "./style.css";
   };
   
   const rectangleFromLineIntersections = (lines: paper.Path.Line[], debug = false) => {
-    const pointsRaw = {x: new Set<number>(), y: new Set<number>()};
+    const gridPointsRaw = {x: new Set<number>(), y: new Set<number>()};
+    const points: paper.Point[] = [];
     lines.map(l => {
         l.strokeWidth = STROKE_WIDTH;
         l.strokeColor = new paper.Color('#000');
@@ -117,20 +118,32 @@ import "./style.css";
             }
             cl.point.x = Math.round(cl.point.x);
             cl.point.y = Math.round(cl.point.y);
+            points.push(cl.point);
             const { x, y } = cl.point;
-            pointsRaw.x.add(x);
-            pointsRaw.y.add(y);
+            gridPointsRaw.x.add(x);
+            gridPointsRaw.y.add(y);
           });
         })
       })
     ;
-    const points = { x: [...pointsRaw.x.values()].sort((a,b) => a - b), y: [...pointsRaw.y.values()].sort((a,b) => a - b)}
-    console.log(points);
+    const gridPoints = { x: [...gridPointsRaw.x.values()].sort((a,b) => a - b), y: [...gridPointsRaw.y.values()].sort((a,b) => a - b)};
+    
+    points.forEach(point => {
+      const {x, y} = point;
+      const xIndex = gridPoints.x.findIndex(v => v === x);
+      const yIndex = gridPoints.y.findIndex(v => v === y);
+      if (debug) {
+        var text = new paper.PointText(point.add(15));
+        text.content = `[${xIndex},${yIndex}]`;
+        text.fillColor = new paper.Color('#00f');
+      }
+    })
+    console.log(gridPoints);
     const diags: [[x: number, y: number], [x2: number, y2: number]][] = [];
-    points.x.forEach((x, xi, arrX) => {
+    gridPoints.x.forEach((x, xi, arrX) => {
       const isXLastIndex = (arrX.length - 1) === xi;
       if (isXLastIndex) return;
-      points.y.forEach((y, yi, arrY) => {
+      gridPoints.y.forEach((y, yi, arrY) => {
         const isYLastIndex = (arrY.length - 1) === yi;
         if (isYLastIndex) return;
         diags.push([[x, y], [arrX[xi+1], arrY[yi+1]]]);
