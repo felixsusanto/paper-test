@@ -1,6 +1,6 @@
 import paper from "paper";
 import seedrandom from "seedrandom";
-import { bottomVerticalLineRenderer, leftHorizontalLineRenderer, rightHorizontalLineRenderer, topVerticalLineRenderer } from "./utils";
+import { ProximityCheck, RoundingFn, bottomVerticalLineRenderer, grid, isTooNear, leftHorizontalLineRenderer, rectangleSeedFactory, rightHorizontalLineRenderer, topVerticalLineRenderer } from "./utils";
 import _ from 'lodash';
 import "reset-css";
 import "./style.scss";
@@ -68,8 +68,6 @@ const canvasRender = (seed: string | null) => {
   }
   seedrandom(seed ? seed : `${new Date().valueOf()}` , { global: true }); 
   
-  type RoundingFn = (x: number) => number;
-
   const oddsWeightFactory = (oddsConfig: Record<string, number>) => {
     const keys: string[] = [];
     const brackets: number[] = [];
@@ -100,80 +98,8 @@ const canvasRender = (seed: string | null) => {
     black: 4,
   });
 
-  const grid = (percent: number, scope: paper.PaperScope, debug = true): RoundingFn => {
-    const { width, height } = scope.view.viewSize;
-    const gridSize = Math.floor(percent * width);
-    if (debug) {
-      const columns = Array(Math.floor(width / gridSize))
-        .fill('')
-        .map((_, i) => {
-          return ((i + 1) * gridSize); 
-        })
-      ;
-      const rows = Array(Math.floor(height / gridSize))
-        .fill('')
-        .map((_, i) => {
-          return ((i + 1) * gridSize);
-        })
-      ;
-      const rectPoints: paper.Point[] = [];
-      rows.forEach((row, ri) => {
-        columns.forEach((col, ci) => {
-          const point = new paper.Point(col, row);
-          const firstIndex = ri === 0 && ci === 0;
-          const lastIndex = ri === (rows.length - 1) && ci === (columns.length - 1);
-          if (firstIndex || lastIndex) {
-            rectPoints.push(point);
-          }
-          const circle = new paper.Path.Circle(point, 3);
-          circle.fillColor = (new paper.Color('#b4da55'));
-        });
-      });
-      const rectDebug = new paper.Path.Rectangle(rectPoints[0]!, rectPoints[1]!);
-      rectDebug.selected = true;
-    }
-    return (x: number) => {
-      const remainder = x % gridSize;
-      const rounding = Math.round(x - remainder);
-      if (rounding === 0) return gridSize;
-      return rounding;
-    };
-  };
-  
   const roundingFn = grid(0.03, global, false);
-  
-  const rectangleSeedFactory = (range: [number, number])  => (roundingFn:(x: number) => number = (x) => x) => {
-    // const range: [number, number] = [0.05, 0.4];
-    const minMaxWidth: [min: number, max: number] = range;
-    const minMaxHeight: [min: number, max: number] = range;
-    const { width, height } = viewSize;
-  
-    const rectWRaw = (minMaxWidth[0] * width) + (Math.abs(minMaxWidth[1] - minMaxWidth[0]) * width * Math.random());
-    const rectHRaw = (minMaxHeight[0] * height) + (Math.abs(minMaxHeight[1] - minMaxHeight[0]) * height * Math.random());
-    const rectW = roundingFn(rectWRaw);
-    const rectH = roundingFn(rectHRaw);
-    const size = new global.Size(rectW, rectH);
-    const boundaryW = width - rectW;
-    const boundaryH = height - rectH;
-  
-    const posRaw: [number, number] = [Math.random() * boundaryW, Math.random() * boundaryH];
-    const pos: [number, number] = posRaw.map(roundingFn) as [number, number];
-    const point = new global.Point(...pos);
-    const rect = new global.Path.Rectangle(point, size);
-    rect.fillColor = new global.Color(palette.blue)
-    return rect;
-  };
-  const rectangleSeed = rectangleSeedFactory([0.2, 0.4]);
-  
-  type ProximityCheck = (r1: paper.Path.Rectangle, r2: paper.Path.Rectangle, p: number) => boolean;
-  
-  const isTooNear: ProximityCheck = (rect1, rect2, padding) => {
-    const rect2IsInsideRect1 = rect2.isInside(rect1.bounds);
-    const rect1IsInsideRect2 = rect1.isInside(rect2.bounds);
-    const rect1IsIntersectingRect2 = rect1.bounds.expand(padding).intersects(rect2.bounds);
-    const rect2IsIntersectingRect1 = rect2.bounds.expand(padding).intersects(rect1.bounds);
-    return rect2IsInsideRect1 || rect1IsInsideRect2 || rect1IsIntersectingRect2 || rect2IsIntersectingRect1;
-  };
+  const rectangleSeed = rectangleSeedFactory([0.2, 0.4], global);
   
   const rectangleFromLineIntersections = (lines: paper.Path.Line[], scope: paper.PaperScope, debug = false) => {
     const { height, width } = scope.view.viewSize;
@@ -277,7 +203,6 @@ const canvasRender = (seed: string | null) => {
     // const rectExpanded: paper.Rectangle[] = [];
     const rectCollection: paper.Path.Rectangle[] = [];
     const EXPAND_RANGE = STROKE_WIDTH * 10;
-    (window as any).collection = rectCollection;
     for (let i = 0; i < totalSeed; i++) {
       let uncommitedRect = rectangleSeed(rounding);
       if (!rectCollection.length) {
@@ -323,8 +248,62 @@ const unveil = () => {
   elms.className = '';
 };
 
+const bgRender = () => {
+  const bg = paper;
+  bg.setup('bg');
+  const roundingFn = grid(0.02, bg, false);
+  const rectangleSeed = rectangleSeedFactory([0.2, 0.4], bg);
+
+  const rectCollection: paper.Path.Rectangle[] = [];
+  const EXPAND_RANGE = 6 * 10;
+
+  for (let i = 0; i < 3; i++) {
+    let uncommitedRect = rectangleSeed(roundingFn);
+    if (!rectCollection.length) {
+      rectCollection.push(uncommitedRect);
+    } else {
+      while(rectCollection.some(r => isTooNear(r, uncommitedRect, EXPAND_RANGE))) {
+        uncommitedRect.remove();
+        uncommitedRect = rectangleSeed(roundingFn);
+      }
+      rectCollection.push(uncommitedRect);
+    }
+  }
+  
+  const strokeColor = '#ccc';
+  const lines: paper.Path.Line[] = [];
+  rectCollection.forEach((rect, _, arr) => {
+    const linesOnRect = [
+      rightHorizontalLineRenderer(rect, arr, 'topLeft', bg, strokeColor),
+      leftHorizontalLineRenderer(rect, arr, 'topLeft', bg, strokeColor),
+      topVerticalLineRenderer(rect, arr, 'topLeft', bg, strokeColor),
+      bottomVerticalLineRenderer(rect, arr, 'topLeft', bg, strokeColor),
+      rightHorizontalLineRenderer(rect, arr, 'bottomRight', bg, strokeColor),
+      leftHorizontalLineRenderer(rect, arr, 'bottomRight', bg, strokeColor),
+      topVerticalLineRenderer(rect, arr, 'bottomRight', bg, strokeColor),
+      bottomVerticalLineRenderer(rect, arr, 'bottomRight', bg, strokeColor),
+    ];
+    linesOnRect.forEach((line) => {
+      line.dashArray = [line.length];
+      line.dashOffset = line.length;
+      lines.push(line);
+    });
+
+  });
+  bg.view.onFrame = () => {
+    lines.forEach((line) => {
+      if (line.dashOffset > 0) {
+        line.dashOffset = Math.max(0, line.dashOffset - 4);
+      }
+    });
+  }
+  
+};
+
+
 canvasRender(title);
 interaction();
 unveil();
+bgRender();
 // setTimeout(() => , 5000);
 

@@ -12,12 +12,12 @@ interface FactoryProps {
 type Origin = 'bottomLeft' | 'topLeft' | 'topRight' | 'bottomRight';
 
 const factoryLineRenderer = (props: FactoryProps) => 
-(rect: paper.Path.Rectangle, rectArr: paper.Path.Rectangle[], origin: Origin, scope: paper.PaperScope) => {
+(rect: paper.Path.Rectangle, rectArr: paper.Path.Rectangle[], origin: Origin, scope: paper.PaperScope, color?: string) => {
   const { x, y } = rect.bounds[origin];
   const line = new paper.Path.Line({
     from: [x, y],
     to: props.toFn(x,y, scope),
-    strokeColor: 'black',
+    strokeColor: color || 'black',
   });
   line.strokeWidth = STROKE_WIDTH;
   line.selected = props.debug;
@@ -87,3 +87,76 @@ const bottomVerticalLineRendererProps: FactoryProps = {
 }
 
 export const bottomVerticalLineRenderer = factoryLineRenderer(bottomVerticalLineRendererProps);
+
+export type RoundingFn = (x: number) => number;
+
+export const grid = (percent: number, scope: paper.PaperScope, debug = true): RoundingFn => {
+  const { width, height } = scope.view.viewSize;
+  const gridSize = Math.floor(percent * width);
+  if (debug) {
+    const columns = Array(Math.floor(width / gridSize))
+      .fill('')
+      .map((_, i) => {
+        return ((i + 1) * gridSize); 
+      })
+    ;
+    const rows = Array(Math.floor(height / gridSize))
+      .fill('')
+      .map((_, i) => {
+        return ((i + 1) * gridSize);
+      })
+    ;
+    const rectPoints: paper.Point[] = [];
+    rows.forEach((row, ri) => {
+      columns.forEach((col, ci) => {
+        const point = new paper.Point(col, row);
+        const firstIndex = ri === 0 && ci === 0;
+        const lastIndex = ri === (rows.length - 1) && ci === (columns.length - 1);
+        if (firstIndex || lastIndex) {
+          rectPoints.push(point);
+        }
+        const circle = new paper.Path.Circle(point, 3);
+        circle.fillColor = (new paper.Color('#b4da55'));
+      });
+    });
+    const rectDebug = new paper.Path.Rectangle(rectPoints[0]!, rectPoints[1]!);
+    rectDebug.selected = true;
+  }
+  return (x: number) => {
+    const remainder = x % gridSize;
+    const rounding = Math.round(x - remainder);
+    if (rounding === 0) return gridSize;
+    return rounding;
+  };
+};
+
+export const rectangleSeedFactory = (range: [number, number], scope: paper.PaperScope)  => (roundingFn:(x: number) => number = (x) => x) => {
+  const minMaxWidth: [min: number, max: number] = range;
+  const minMaxHeight: [min: number, max: number] = range;
+  const { width, height } = scope.view.viewSize;
+
+  const rectWRaw = (minMaxWidth[0] * width) + (Math.abs(minMaxWidth[1] - minMaxWidth[0]) * width * Math.random());
+  const rectHRaw = (minMaxHeight[0] * height) + (Math.abs(minMaxHeight[1] - minMaxHeight[0]) * height * Math.random());
+  const rectW = roundingFn(rectWRaw);
+  const rectH = roundingFn(rectHRaw);
+  const size = new scope.Size(rectW, rectH);
+  const boundaryW = width - rectW;
+  const boundaryH = height - rectH;
+
+  const posRaw: [number, number] = [Math.random() * boundaryW, Math.random() * boundaryH];
+  const pos: [number, number] = posRaw.map(roundingFn) as [number, number];
+  const point = new scope.Point(...pos);
+  const rect = new scope.Path.Rectangle(point, size);
+  // rect.fillColor = new scope.Color(palette.blue)
+  return rect;
+};
+
+export type ProximityCheck = (r1: paper.Path.Rectangle, r2: paper.Path.Rectangle, p: number) => boolean;
+  
+export const isTooNear: ProximityCheck = (rect1, rect2, padding) => {
+  const rect2IsInsideRect1 = rect2.isInside(rect1.bounds);
+  const rect1IsInsideRect2 = rect1.isInside(rect2.bounds);
+  const rect1IsIntersectingRect2 = rect1.bounds.expand(padding).intersects(rect2.bounds);
+  const rect2IsIntersectingRect1 = rect2.bounds.expand(padding).intersects(rect1.bounds);
+  return rect2IsInsideRect1 || rect1IsInsideRect2 || rect1IsIntersectingRect2 || rect2IsIntersectingRect1;
+};
