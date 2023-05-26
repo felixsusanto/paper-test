@@ -66,7 +66,7 @@ const canvasRender = (seed: string | null) => {
     const titleNode = document.getElementById('art-title')!;
     titleNode.innerText = stringSeed;
   }
-  const rng = seedrandom(seed ? seed : `${new Date().valueOf()}` , { global: true }); 
+  seedrandom(seed ? seed : `${new Date().valueOf()}` , { global: true }); 
   
   type RoundingFn = (x: number) => number;
 
@@ -190,7 +190,7 @@ const canvasRender = (seed: string | null) => {
       })
     ;
     lines
-      .forEach((l, i, arr) => {
+      .forEach((l, _, arr) => {
         arr.forEach(innerL => {
           if (l === innerL) return;
           const ints = l.getIntersections(innerL);
@@ -240,7 +240,7 @@ const canvasRender = (seed: string | null) => {
       horizontal: _.groupBy(coordinates, (o) => o.index[1]),
       vertical: _.groupBy(coordinates, (o) => o.index[0]),
     };
-    coordinates.forEach((coor, index, arr) => {
+    coordinates.forEach((coor) => {
       const {index: [idx, idy]} = coor;
       const curr: [number, number] = [idx, idy];
       if (gridPoints.x.length === (idx + 1) || gridPoints.y.length === (idy + 1)) return;
@@ -300,7 +300,7 @@ const canvasRender = (seed: string | null) => {
     const lines: (paper.Path.Line | paper.Path.Rectangle)[] = [
       canvasRect
     ];
-    rectCollection.forEach((rect, index, rectArr) => {
+    rectCollection.forEach((rect, _, rectArr) => {
       [
         leftHorizontalLineRenderer(rect, rectArr, 'topLeft', global),
         rightHorizontalLineRenderer(rect, rectArr, 'topLeft', global),
@@ -315,41 +315,8 @@ const canvasRender = (seed: string | null) => {
     console.log(lines);
     rectangleFromLineIntersections(lines, global);
   };
-  
   render(4, isTooNear, roundingFn);
-  
-  const scratchpad = () => {
-    const { width, height } = global.view.viewSize;
-    const vLine = (x: number): [paper.Point, paper.Point] => {
-      return [
-        new paper.Point(x, 0),
-        new paper.Point(x, height)
-      ];
-    };
-    const hLine = (y: number): [paper.Point, paper.Point] => {
-      return [
-        new paper.Point(0, y),
-        new paper.Point(width, y)
-      ];
-    };
-  
-    
-    const lines = [
-        new paper.Path.Line(...vLine(roundingFn(Math.random() * width))),
-        new paper.Path.Line(...hLine(roundingFn(Math.random() * height))),
-        new paper.Path.Line(...vLine(roundingFn(Math.random() * width))),
-        new paper.Path.Line(...hLine(roundingFn(Math.random() * height))),
-        new paper.Path.Line(...vLine(roundingFn(Math.random() * width))),
-        new paper.Path.Line(...hLine(roundingFn(Math.random() * height))),
-        new paper.Path.Line(...vLine(roundingFn(Math.random() * width))),
-        new paper.Path.Line(...hLine(roundingFn(Math.random() * height))),
-      ];
-    
-    rectangleFromLineIntersections(lines, global);
-    
-  };
-  
-  // scratchpad();
 };
+
 canvasRender(title);
 interaction();
