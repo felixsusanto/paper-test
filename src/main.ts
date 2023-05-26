@@ -318,5 +318,13 @@ const canvasRender = (seed: string | null) => {
   render(4, isTooNear, roundingFn);
 };
 
+const unveil = () => {
+  const elms = document.getElementsByClassName('unstyled')[0];
+  elms.className = '';
+};
+
 canvasRender(title);
 interaction();
+unveil();
+// setTimeout(() => , 5000);
+

@@ -53,7 +53,7 @@ const factoryLineRenderer = (props: FactoryProps) =>
 };
 
 const leftHorizontalRendererProps: FactoryProps = {
-  toFn: (x, y) => [0, y],
+  toFn: (_, y) => [0, y],
   sortFn: (locA, locB) => locB.point.x - locA.point.x,
   debug: false,
   orientation: 'horizontal',
@@ -62,7 +62,7 @@ const leftHorizontalRendererProps: FactoryProps = {
 export const leftHorizontalLineRenderer = factoryLineRenderer(leftHorizontalRendererProps);
 
 const rightHorizontalLineRendererProps: FactoryProps = {
-  toFn: (x, y, scope) => [scope.project.view.viewSize.width, y],
+  toFn: (_, y, scope) => [scope.project.view.viewSize.width, y],
   sortFn: (locA, locB) => locA.point.x - locB.point.x,
   debug: false,
   orientation: 'horizontal',
@@ -71,7 +71,7 @@ const rightHorizontalLineRendererProps: FactoryProps = {
 export const rightHorizontalLineRenderer = factoryLineRenderer(rightHorizontalLineRendererProps);
 
 const topVerticalLineRendererProps: FactoryProps = {
-  toFn: (x, y) => [x, 0],
+  toFn: (x) => [x, 0],
   sortFn: (locA, locB) => locB.point.y - locA.point.y,
   debug: false,
   orientation: 'vertical',
@@ -80,7 +80,7 @@ const topVerticalLineRendererProps: FactoryProps = {
 export const topVerticalLineRenderer = factoryLineRenderer(topVerticalLineRendererProps);
 
 const bottomVerticalLineRendererProps: FactoryProps = {
-  toFn: (x, y, scope) => [x, scope.project.view.viewSize.height],
+  toFn: (x, _, scope) => [x, scope.project.view.viewSize.height],
   sortFn: (locA, locB) => locA.point.y - locB.point.y,
   debug: false,
   orientation: 'vertical',

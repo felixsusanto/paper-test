@@ -10,14 +10,17 @@
   color: var(--blue);
 }
 
+
 .title {
   font-family: 'Playfair Display', serif;
+  font-display: optional;
   font-size: 6rem;
   margin-bottom: 0.3em;
   margin-top: 0.3em;
 }
 .sub {
   font-family: 'Raleway', sans-serif;
+  font-display: optional;
   margin-bottom: 2em;
   font-weight: 500;
 }
@@ -35,7 +38,10 @@ body {
   background: #f6f5ee;
   text-align: center;
   font-family: 'Raleway', sans-serif;
+  font-display: optional;
+  font-weight: 500;
 }
+
 figure {
   display: inline-block;
   line-height: 0;
