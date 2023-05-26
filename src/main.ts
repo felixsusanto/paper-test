@@ -5,12 +5,52 @@ import _ from 'lodash';
 import "reset-css";
 import "./style.scss";
 
-(() => {
+let title: string | null = null;
+const getQueryParams = /(\?.+)/.exec(window.location.href);
+if (getQueryParams) {
+  const queryParams = getQueryParams[1];
+  const search = new URLSearchParams(queryParams);
+  title = search.get('title');
+}
+
+const interaction = () => {
+  if (title) {
+    const titleNode = document.getElementById('art-title')!;
+    titleNode.innerText = title;
+  }
+  const canvasCta = document.getElementById('download-cta')!;
+  canvasCta.onclick = () => {
+    const api = (window as any).global as paper.PaperScope;
+    const svg = api.project.exportSVG() as SVGAElement;
+    const node = svg;
+
+    const [w, h] = [+node.getAttribute('width')!, +node.getAttribute('height')!]
+      .map(n => n * 2)
+    ;
+    node.setAttribute('width', `${w}`);
+    node.setAttribute('height', `${h}`);
+
+    const s = new XMLSerializer();
+    const svgString = s.serializeToString(svg);
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(svgString as string));
+    element.setAttribute('download', 'artwork.svg');
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+  };
+};
+
+const canvasRender = (seed: string | null) => {
   const global = paper;
   (window as any).global = global;
   const STROKE_WIDTH = 6;
   
-  global.setup("canvasdev");
+  global.setup("canvas");
   const viewSize = global.project.view.viewSize;
   const palette: Record<string, string> = {
     blue: "#4754bd",
@@ -18,9 +58,15 @@ import "./style.scss";
     yellow: "#f1d93b",
     black: "#000",
   }; 
-  const rng = seedrandom('Abcde');// , { global: true }); 
-  const {black, ...colorPalette} = palette;
-  const paletteArr = Object.values(palette);
+  let stringSeed = '';
+  if (seed) {
+    stringSeed = seed;
+  } else {
+    stringSeed = (new Date().valueOf()) + '';
+    const titleNode = document.getElementById('art-title')!;
+    titleNode.innerText = stringSeed;
+  }
+  const rng = seedrandom(seed ? seed : `${new Date().valueOf()}` , { global: true }); 
   
   type RoundingFn = (x: number) => number;
 
@@ -51,11 +97,9 @@ import "./style.scss";
     blue: 16,
     red: 13,
     yellow: 13,
-    black: 2,
+    black: 4,
   });
 
-  const t = Array(100).fill('').map(() => colorWeights(Math.random()));
-  console.log(_.countBy(t, _.identity))
   const grid = (percent: number, scope: paper.PaperScope, debug = true): RoundingFn => {
     const { width, height } = scope.view.viewSize;
     const gridSize = Math.floor(percent * width);
@@ -131,18 +175,21 @@ import "./style.scss";
     return rect2IsInsideRect1 || rect1IsInsideRect2 || rect1IsIntersectingRect2 || rect2IsIntersectingRect1;
   };
   
-  const rectangleFromLineIntersections = (lines: paper.Path.Line[], debug = false) => {
+  const rectangleFromLineIntersections = (lines: paper.Path.Line[], scope: paper.PaperScope, debug = false) => {
+    const { height, width } = scope.view.viewSize;
     const gridPointsRaw = {
       x: new Set<number>(), 
       y: new Set<number>(),
       coordinates: new Map<string, [number, number]>(),
     };
-    lines.map(l => {
-        l.strokeWidth = STROKE_WIDTH;
-        l.strokeColor = new paper.Color('#000');
-        // l.selected = true;
-        return l;
+    
+    [[0,0],[width, 0],[0, height],[width, height]]
+      .forEach((coor) => {
+        const [x, y] = coor;
+        gridPointsRaw.coordinates.set(`${x}, ${y}`, [x,y]);
       })
+    ;
+    lines
       .forEach((l, i, arr) => {
         arr.forEach(innerL => {
           if (l === innerL) return;
@@ -217,6 +264,7 @@ import "./style.scss";
         if (debug) {
           const dg = new paper.Path.Line(new paper.Point(...currCoor), new paper.Point(...nodeCoor));
           dg.strokeColor = r.fillColor;
+          dg.selected = true;
           r.opacity = 0.2;
         }
         // r.selected = true;
@@ -244,7 +292,14 @@ import "./style.scss";
         rectCollection.push(uncommitedRect);
       }
     }
-    const lines: paper.Path.Line[] = [];
+    const canvasRect = new paper.Path.Rectangle(
+      new paper.Point(0,0),
+      new paper.Point(global.view.viewSize.width, global.view.viewSize.height)
+    );
+    canvasRect.strokeColor = null;
+    const lines: (paper.Path.Line | paper.Path.Rectangle)[] = [
+      canvasRect
+    ];
     rectCollection.forEach((rect, index, rectArr) => {
       [
         leftHorizontalLineRenderer(rect, rectArr, 'topLeft', global),
@@ -258,7 +313,7 @@ import "./style.scss";
       ].forEach(l => lines.push(l))
     });
     console.log(lines);
-    rectangleFromLineIntersections(lines);
+    rectangleFromLineIntersections(lines, global);
   };
   
   render(4, isTooNear, roundingFn);
@@ -290,9 +345,11 @@ import "./style.scss";
         new paper.Path.Line(...hLine(roundingFn(Math.random() * height))),
       ];
     
-    rectangleFromLineIntersections(lines);
+    rectangleFromLineIntersections(lines, global);
     
   };
   
   // scratchpad();
-})();
+};
+canvasRender(title);
+interaction();

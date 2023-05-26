@@ -3,6 +3,11 @@
   --canvas-height: 400px;
   --frame-padding: 100px;
   --frame: 100px;
+  --blue: #4754bd;
+}
+
+#art-title, a, a:visited {
+  color: var(--blue);
 }
 
 .title {
@@ -13,7 +18,6 @@
 }
 .sub {
   font-family: 'Raleway', sans-serif;
-  letter-spacing: 0.5em;
   margin-bottom: 2em;
   font-weight: 500;
 }
@@ -30,6 +34,7 @@ canvas[resize] {
 body { 
   background: #f6f5ee;
   text-align: center;
+  font-family: 'Raleway', sans-serif;
 }
 figure {
   display: inline-block;
@@ -88,7 +93,7 @@ figure {
   }
 }
 
-.test {
+.overlay {
   position: relative;
   &:before {
     content: '';
@@ -99,8 +104,40 @@ figure {
     bottom: 0;
     box-shadow: inset 0px .3em .2em rgba(0,0,0,.2);
   }
+  &:after {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    transition: all 0.3s;
+  }
+  &:hover {
+    cursor: pointer;
+    &:after {
+      background: rgba(0,0,0,0.8);
+    }
+    .download-cta {
+      opacity: 1;
+    }
+  }
+  .download-cta {
+    font-weight: 500;
+    color: #fff;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    opacity: 0;
+    transition: all 0.3s;
+  }
+}
+
+footer {
+  margin-top: 4em;
 }
 #canvasdev {
   width: 800px;
-  height: 800px;
+  height: 600px;
 }
