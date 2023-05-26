@@ -14,8 +14,8 @@ if (getQueryParams) {
 }
 
 const interaction = () => {
+  const titleNode = document.getElementById('art-title')!;
   if (title) {
-    const titleNode = document.getElementById('art-title')!;
     titleNode.innerText = title;
   }
   const canvasCta = document.getElementById('download-cta')!;
@@ -34,7 +34,7 @@ const interaction = () => {
     const svgString = s.serializeToString(svg);
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(svgString as string));
-    element.setAttribute('download', 'artwork.svg');
+    element.setAttribute('download', `mondrian-${titleNode.innerText}.svg`);
 
     element.style.display = 'none';
     document.body.appendChild(element);
@@ -62,7 +62,7 @@ const canvasRender = (seed: string | null) => {
   if (seed) {
     stringSeed = seed;
   } else {
-    stringSeed = (new Date().valueOf()) + '';
+    stringSeed = (new Date().valueOf() % 999999) + '';
     const titleNode = document.getElementById('art-title')!;
     titleNode.innerText = stringSeed;
   }
