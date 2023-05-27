@@ -160,3 +160,28 @@ export const isTooNear: ProximityCheck = (rect1, rect2, padding) => {
   const rect2IsIntersectingRect1 = rect2.bounds.expand(padding).intersects(rect1.bounds);
   return rect2IsInsideRect1 || rect1IsInsideRect2 || rect1IsIntersectingRect2 || rect2IsIntersectingRect1;
 };
+
+export const renderNonOverlappingRectangles = (
+  rectangleSeed: (roundingFn?: RoundingFn) => paper.Path.Rectangle, 
+  roundingFn: RoundingFn,
+  expandRange: number,
+  totalRectangle: number,
+  proximityCheck: ProximityCheck = isTooNear,
+) => {
+const rectCollection: paper.Path.Rectangle[] = [];
+const EXPAND_RANGE = expandRange;
+
+for (let i = 0; i < totalRectangle; i++) {
+  let uncommitedRect = rectangleSeed(roundingFn);
+  if (!rectCollection.length) {
+    rectCollection.push(uncommitedRect);
+  } else {
+    while(rectCollection.some(r => proximityCheck(r, uncommitedRect, EXPAND_RANGE))) {
+      uncommitedRect.remove();
+      uncommitedRect = rectangleSeed(roundingFn);
+    }
+    rectCollection.push(uncommitedRect);
+  }
+}
+return rectCollection;
+}

@@ -1,6 +1,6 @@
 import paper from "paper";
 import seedrandom from "seedrandom";
-import { ProximityCheck, RoundingFn, bottomVerticalLineRenderer, grid, isTooNear, leftHorizontalLineRenderer, rectangleSeedFactory, rightHorizontalLineRenderer, topVerticalLineRenderer } from "./utils";
+import { ProximityCheck, renderNonOverlappingRectangles, RoundingFn, bottomVerticalLineRenderer, grid, isTooNear, leftHorizontalLineRenderer, rectangleSeedFactory, rightHorizontalLineRenderer, topVerticalLineRenderer } from "./utils";
 import _ from 'lodash';
 import "reset-css";
 import "./style.scss";
@@ -51,7 +51,6 @@ const canvasRender = (seed: string | null) => {
   const STROKE_WIDTH = 6;
   
   global.setup("canvas");
-  const viewSize = global.project.view.viewSize;
   const palette: Record<string, string> = {
     blue: "#4754bd",
     red: "#e44525",
@@ -201,22 +200,15 @@ const canvasRender = (seed: string | null) => {
 
   const render = (totalSeed: number, proximityCheck: ProximityCheck, rounding: RoundingFn) => {
     // const rectExpanded: paper.Rectangle[] = [];
-    const rectCollection: paper.Path.Rectangle[] = [];
     const EXPAND_RANGE = STROKE_WIDTH * 10;
-    for (let i = 0; i < totalSeed; i++) {
-      let uncommitedRect = rectangleSeed(rounding);
-      if (!rectCollection.length) {
-        rectCollection.push(uncommitedRect);
-      } else {
-        while(rectCollection.some(r => proximityCheck(r, uncommitedRect, EXPAND_RANGE))) {
-          uncommitedRect.remove();
-          uncommitedRect = rectangleSeed(rounding);
-        }
-        const colorName = colorWeights(Math.random());
-        uncommitedRect.fillColor = colorName === 'transparent' ? null : new global.Color(palette[colorName]);
-        rectCollection.push(uncommitedRect);
-      }
-    }
+    const rectCollection: paper.Path.Rectangle[] = renderNonOverlappingRectangles(
+      rectangleSeed,
+      rounding,
+      EXPAND_RANGE,
+      totalSeed,
+      proximityCheck,
+    );
+    
     const canvasRect = new paper.Path.Rectangle(
       new paper.Point(0,0),
       new paper.Point(global.view.viewSize.width, global.view.viewSize.height)
@@ -248,27 +240,21 @@ const unveil = () => {
   elms.className = '';
 };
 
+
+
 const bgRender = () => {
   const bg = paper;
   bg.setup('bg');
   const roundingFn = grid(0.02, bg, false);
   const rectangleSeed = rectangleSeedFactory([0.2, 0.4], bg);
 
-  const rectCollection: paper.Path.Rectangle[] = [];
   const EXPAND_RANGE = 6 * 10;
-
-  for (let i = 0; i < 3; i++) {
-    let uncommitedRect = rectangleSeed(roundingFn);
-    if (!rectCollection.length) {
-      rectCollection.push(uncommitedRect);
-    } else {
-      while(rectCollection.some(r => isTooNear(r, uncommitedRect, EXPAND_RANGE))) {
-        uncommitedRect.remove();
-        uncommitedRect = rectangleSeed(roundingFn);
-      }
-      rectCollection.push(uncommitedRect);
-    }
-  }
+  const rectCollection: paper.Path.Rectangle[] = renderNonOverlappingRectangles(
+    rectangleSeed,
+    roundingFn,
+    EXPAND_RANGE,
+    4
+  );
   
   const strokeColor = '#ccc';
   const lines: paper.Path.Line[] = [];
@@ -305,5 +291,3 @@ canvasRender(title);
 interaction();
 unveil();
 bgRender();
-// setTimeout(() => , 5000);
-
