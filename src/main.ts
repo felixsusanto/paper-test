@@ -279,7 +279,7 @@ const bgRender = () => {
   bg.view.onFrame = () => {
     lines.forEach((line) => {
       if (line.dashOffset > 0) {
-        line.dashOffset = Math.max(0, line.dashOffset - 4);
+        line.dashOffset = Math.max(0, line.dashOffset - 5);
       }
     });
   }
