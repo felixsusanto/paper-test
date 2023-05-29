@@ -21,7 +21,7 @@ const interaction = () => {
   const canvasCta = document.getElementById('download-cta')!;
   canvasCta.onclick = () => {
     const api = (window as any).global as paper.PaperScope;
-    const svg = api.project.exportSVG() as SVGAElement;
+    const svg = api.projects[0].exportSVG() as SVGAElement;
     const node = svg;
 
     const [w, h] = [+node.getAttribute('width')!, +node.getAttribute('height')!]
