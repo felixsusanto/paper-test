@@ -65,7 +65,7 @@ const canvasRender = (seed: string | null) => {
     const titleNode = document.getElementById('art-title')!;
     titleNode.innerText = stringSeed;
   }
-  seedrandom(seed ? seed : `${new Date().valueOf()}` , { global: true }); 
+  seedrandom(seed ? seed : stringSeed, { global: true }); 
   
   const oddsWeightFactory = (oddsConfig: Record<string, number>) => {
     const keys: string[] = [];
